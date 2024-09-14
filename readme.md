@@ -38,16 +38,17 @@ Each service requires a dedicated technology stack and well-defined communicatio
   - Language: Python
   - Framework: Flask (for REST API routing)
   - Authentication: JSON Web Tokens (JWT) for secure token-based authentication.
-  - Database: PostgreSQL to store user credentials.
+  - Database: PostgreSQL
 - **Calendar Service**:
   - Language: Python
   - Framework: Python’s socket library for real-time communication.
   - Rooms: Users can join specific socket rooms (e.g., family groups) to manage events.
-  - Database: Redis to manage active room sessions and events.
+  - Database: PostgreSQL
 - **Gateway Component**:
   - Language: Go
   - Framework: Gorilla Mux for routing requests
   - Responsibilities: Routing incoming requests to the appropriate service, handling authentication, and load balancing.
+  - Database: Redis
 
 **Communication Patterns**:
 
@@ -57,7 +58,7 @@ Each service requires a dedicated technology stack and well-defined communicatio
   - Real-time communication using WebSockets, where users can join rooms and receive live updates about event changes in their respective groups.
 - **Token-based Communication**:
   - The Authentication Service will provide JWT tokens that are passed to the Calendar Service for secure communication and validation within socket rooms.
-- **Gateway Communication**:
+- **gRPC (for Gateway Communication)**:
   - The Gateway Component will handle incoming requests, verify JWT tokens, and route requests to the appropriate service (Authentication or Calendar).
 
 ### 4. Design Data Management
@@ -67,44 +68,55 @@ Each service will have its own database or data management strategy to ensure in
 #### Endpoints for Authentication Service:
 
 - **POST /users/register**: Registers a new user.
+
   - Request Body:
-  ```json
-  {
-    "username": "string",
-    "password": "string"
-  }
-  ```
+    ```json
+    {
+      "username": "string",
+      "password": "string"
+    }
+    ```
+  - Response Codes:
+    - **201 Created**: User was successfully registered.
+    - **400 Bad Request**: Invalid input (e.g., missing username or password).
+    - **409 Conflict**: Username already exists.
+
 - **POST /users/login**: Logs in an existing user.
 
   - Request Body:
-
-  ```json
-  {
-    "username": "string",
-    "password": "string"
-  }
-  ```
-
+    ```json
+    {
+      "username": "string",
+      "password": "string"
+    }
+    ```
   - Response:
-
-  ```json
-  {
-    "token": "JWT_token"
-  }
-  ```
+    ```json
+    {
+      "token": "JWT_token"
+    }
+    ```
+  - Response Codes:
+    - **200 OK**: Successfully authenticated and token returned.
+    - **401 Unauthorized**: Invalid username or password.
+    - **400 Bad Request**: Malformed request (e.g., missing fields).
 
 - **GET /users/me**: Fetches the details of the logged-in user (using JWT).
   - Response:
-  ```json
-  {
-    "username": "string",
-    "userId": "string"
-  }
-  ```
+    ```json
+    {
+      "username": "string",
+      "userId": "string"
+    }
+    ```
+  - Response Codes:
+    - **200 OK**: User information successfully retrieved.
+    - **401 Unauthorized**: JWT token is missing or invalid.
+    - **403 Forbidden**: User does not have permission to access the requested resource.
 
 #### Real-Time Calendar Data (Python + Sockets):
 
-- Users will interact with the calendar service via socket connections. Here’s how rooms and events work:
+Users will interact with the calendar service via socket connections. Here’s how rooms and events work:
 
 1. **Create Room**: When a group (family or friends) starts using the calendar, a new room (socket namespace) is created. Each room can have multiple users.
    - Example: Room for "Family A" created.
@@ -134,6 +146,10 @@ Each service will have its own database or data management strategy to ensure in
       "token": "JWT_token"
     }
     ```
+  - Response Codes:
+    - **200 OK**: Successfully connected to the room.
+    - **401 Unauthorized**: Invalid or missing JWT token.
+    - **404 Not Found**: Room does not exist.
 
 - **Create Event**:
 
@@ -147,20 +163,23 @@ Each service will have its own database or data management strategy to ensure in
       "endTime": "datetime"
     }
     ```
+  - Response Codes:
+    - **201 Created**: Event successfully created and broadcasted.
+    - **400 Bad Request**: Invalid event data (e.g., missing or invalid fields).
+    - **403 Forbidden**: User not allowed to create events in this room.
 
 - **Broadcast Update**:
   - Event: `update_event`
   - Broadcasted to all room members when an event is created or updated.
+  - Response Codes:
+    - **200 OK**: Event update successfully broadcasted.
+    - **400 Bad Request**: Invalid event data.
+    - **404 Not Found**: Event does not exist.
 
 ### 5. Set Up Deployment and Scaling
 
 To manage and deploy our microservices efficiently, we will employ containerization and orchestration tools:
 
 - **Docker**: Each service will run in its own Docker container, providing isolation and simplifying deployment.
-- **Kubernetes**: To manage scaling and failover, Kubernetes will be used to orchestrate the containers, ensuring high availability and efficient resource management.
 
-#### Deployment Steps:
-
-1. Containerize each service using Docker.
-2. Deploy services to a Kubernetes cluster.
-3. Use Kubernetes auto-scaling features to handle varying traffic loads.
+- **Scaling**: The system will use horizontal scaling multiplying the instances of the services.
