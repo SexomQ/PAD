@@ -1,0 +1,57 @@
+@startuml
+actor User
+
+frame "Docker Container: Gateway & Load Balancers" {
+  [Gateway] as Gateway
+  [Load balancer] as LB1
+  [Load balancer] as LB2
+}
+frame "Docker Container: Service Discovery" {
+  [Service Discovery] as SD
+}
+frame "Docker Container: Service Registry" {
+  [Service Registry] as SR
+}
+frame "Docker Container: Calendar Service (1)" {
+  [Calendar Service (1)] as CS1
+}
+frame "Docker Container: Calendar Service (2)" {
+  [Calendar Service (2)] as CS2
+}
+frame "Docker Container: User Management Service 1" {
+  [User Management Service (1)] as UM1
+}
+frame "Docker Container: User Management Service 2" {
+  [User Management Service (2)] as UM2
+}
+frame "Docker Container: Cache" {
+  [Cache] as Cache
+}
+frame "Docker Container: Redis" {
+  database Redis
+}
+frame "Docker Container: Postgre" {
+  database Postgre
+}
+
+User --> Gateway
+
+Gateway --> LB1 : gRPC
+Gateway --> LB2 : gRPC
+Gateway --> SD : gRPC
+Gateway --> Cache : gRPC
+
+SD --> SR : gRPC
+
+Cache --> Redis
+
+LB1 --> CS1 : WebSocket
+LB1 --> CS2 : WebSocket
+LB2 --> UM1 : HTTP
+LB2 --> UM2 : HTTP
+
+CS1 --> Postgre 
+CS2 --> Postgre 
+UM1 --> Postgre 
+UM2 --> Postgre
+@enduml

@@ -26,7 +26,7 @@ In the Shared Calendar App, the following services are developed:
 
 #### Architecture Diagram:
 
-TODO Here add diagram
+![Architecture Design](utils/ArchitectureDesign.png)
 
 ### 3. Technology Stack and Communication Patterns
 
