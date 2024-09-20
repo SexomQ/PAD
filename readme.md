@@ -143,12 +143,12 @@ Users will interact with the calendar service via socket connections. Here’s h
     ```json
     {
       "roomId": "family_room",
-      "token": "JWT_token"
+      "password": "room_psw"
     }
     ```
   - Response Codes:
     - **200 OK**: Successfully connected to the room.
-    - **401 Unauthorized**: Invalid or missing JWT token.
+    - **401 Unauthorized**: Invalid or missing password.
     - **404 Not Found**: Room does not exist.
 
 - **Create Event**:
@@ -178,8 +178,8 @@ Users will interact with the calendar service via socket connections. Here’s h
 
 ### 5. Set Up Deployment and Scaling
 
-To manage and deploy our microservices efficiently, we will employ containerization and orchestration tools:
+To manage and deploy our microservices efficiently, we will employ containerization tools:
 
 - **Docker**: Each service will run in its own Docker container, providing isolation and simplifying deployment.
 
-- **Scaling**: The system will use horizontal scaling multiplying the instances of the services.
+- **Scaling**: The system will use horizontal scaling multiplying the instances of the services using Docker Compose.
