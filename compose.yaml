@@ -1,0 +1,73 @@
+# version: "3.8"
+
+services:
+  user-management-service:
+    build:
+      context: ./user-management-service
+    container_name: user-management-service
+    # depends_on:
+    #   - auth-db
+    ports:
+      - "5001:5001"
+    networks:
+      - main-network
+
+  # user-management-db:
+  #   image: postgres:16
+  #   environment:
+  #     - POSTGRES_USER=admin
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=authdb
+  #   volumes:
+  #     - ./auth-db/init-auth.sql:/docker-entrypoint-initdb.d/init-auth.sql
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - study-network
+
+  calendar-service:
+    build:
+      context: ./calendar-service
+    container_name: calendar-service
+    # depends_on:
+    #   - calendar-db
+    ports:
+      - "5002:5002"
+    networks:
+      - main-network
+
+#   calendar-db:
+#     image: postgres:13
+#     environment:
+#       - POSTGRES_USER=admin
+#       - POSTGRES_PASSWORD=password
+#       - POSTGRES_DB=flashcardsdb
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - ./flashcards-db/init-flash.sql:/docker-entrypoint-initdb.d/init-flash.sql
+#     networks:
+#       - study-network
+
+#   gateway:
+#     build:
+#       context: ./gateway
+#     container_name: gateway
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       - auth-service
+#       - flashcards-service
+#     networks:
+#       - study-network
+
+#   redis:
+#     image: "redis:latest"
+#     container_name: redis
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - study-network
+networks:
+  main-network:
+    driver: bridge
