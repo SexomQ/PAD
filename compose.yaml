@@ -10,14 +10,14 @@ services:
     ports:
       - "5001:5001"
     env_file:
-      - ./.env
+      - user-management-db/.env
     networks:
       - main-network
 
   user-management-db:
     image: postgres:16
     env_file:
-      - ./.env
+      - user-management-db/.env
     volumes:
       - user-management-data:/var/lib/postgresql/data
     ports:
@@ -25,53 +25,54 @@ services:
     networks:
       - main-network
 
-  # calendar-service:
-    # build:
-    #   context: ./calendar-service
-    # container_name: calendar-service
-    # # depends_on:
-    # #   - calendar-db
-    # ports:
-    #   - "5002:5002"
-    # networks:
-    #   - main-network
+  calendar-service:
+    build:
+      context: ./calendar-service
+    container_name: calendar-service
+    depends_on:
+      - calendar-db
+    env_file:
+      - calendar-db/.env
+    ports:
+      - "5002:5002"
+    networks:
+      - main-network
 
-#   calendar-db:
-#     image: postgres:13
-#     environment:
-#       - POSTGRES_USER=admin
-#       - POSTGRES_PASSWORD=password
-#       - POSTGRES_DB=flashcardsdb
-#     ports:
-#       - "5433:5432"
-#     volumes:
-#       - ./flashcards-db/init-flash.sql:/docker-entrypoint-initdb.d/init-flash.sql
-#     networks:
-#       - study-network
+  calendar-db:
+    image: postgres:16
+    env_file:
+      - calendar-db/.env
+    volumes:
+      - calendar-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - main-network
+    #   gateway:
+    #     build:
+    #       context: ./gateway
+    #     container_name: gateway
+    #     ports:
+    #       - "8080:8080"
+    #     depends_on:
+    #       - auth-service
+    #       - flashcards-service
+    #     networks:
+    #       - study-network
 
-#   gateway:
-#     build:
-#       context: ./gateway
-#     container_name: gateway
-#     ports:
-#       - "8080:8080"
-#     depends_on:
-#       - auth-service
-#       - flashcards-service
-#     networks:
-#       - study-network
-
-#   redis:
-#     image: "redis:latest"
-#     container_name: redis
-#     ports:
-#       - "6379:6379"
-#     networks:
-#       - study-network
+    #   redis:
+    #     image: "redis:latest"
+    #     container_name: redis
+    #     ports:
+    #       - "6379:6379"
+    #     networks:
+    #       - study-network
 networks:
   main-network:
     driver: bridge
 
 volumes:
   user-management-data:
-    driver: local  
+    driver: local
+  calendar-data:
+    driver: local

@@ -1,42 +1,61 @@
 from flask import Flask, request, session, jsonify
-from __main__ import app, db
+from flask_limiter.util import get_remote_address
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
+from __main__ import app, db, jwt, limiter, semaphore
 from models.model import User
 
+@app.route('/status', methods=['GET'])
+def status():
+    try:
+        semaphore.acquire()
+        users = db.session.query(User).all()
+        if users:
+            return jsonify({'message': 'Service and database are up and running'}), 200
+    finally:
+        semaphore.release()
+
 @app.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
-    # Get credentials from json 
-    credentials = request.get_json()
+    try:
+        semaphore.acquire()
+        # Get credentials from json 
+        credentials = request.get_json()
 
-    if not credentials or 'username' not in credentials or 'password' not in credentials:
-        return "Missing username or password", 400
+        if not credentials or 'username' not in credentials or 'password' not in credentials:
+            return "Missing username or password", 400
 
-    username = credentials['username']
-    password = credentials['password']
+        username = credentials['username']
+        password = credentials['password']
 
-    check_user = db.session.query(User).filter_by(username=username).first()
-    if check_user:
-        return "User already exists", 400
-    
-    new_user = User(username=username, password=password)
-    db.session.add(new_user)
-    db.session.commit()
+        check_user = db.session.query(User).filter_by(username=username).first()
+        if check_user:
+            return "User already exists", 409
+        
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
 
-    print(f"Registered new user {username}")
-    return jsonify(credentials), 201
-
+        return jsonify({"message": "User registered successfully!"}), 201
+    finally:
+        semaphore.release()
     
 @app.route('/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
-    # Get credentials from json 
-    credentials = request.get_json()
-    username = credentials['username']
-    password = credentials['password']
+    try:
+        semaphore.acquire()
+        # Get credentials from json 
+        credentials = request.get_json()
+        username = credentials['username']
+        password = credentials['password']
 
-    print(f"Received login request for user {username}")
+        user = db.session.query(User).filter_by(username=username, password=password).first()
+        if not user:
+            return "Invalid credentials", 401
 
-    return "Cool, you're logged in!", 200
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)
-    return "Logged out!", 200
+        jwt_token = create_access_token(identity=username)
+        
+        return jsonify({"message": "Logged in successfully!", "token" : jwt_token, "username" : user.username}), 200
+    finally:
+        semaphore.release()

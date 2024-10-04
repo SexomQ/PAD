@@ -1,7 +1,7 @@
 from main import create_app, db, User
 
 def init_db(db):
-    app = create_app(db)
+    app, db, jwt, limiter, semaphore = create_app(db)
     with app.app_context():
         db.create_all()
         if db.session.query(User).filter_by(username='admin').first():
