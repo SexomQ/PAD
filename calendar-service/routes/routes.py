@@ -5,7 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_tok
 from __main__ import app, db, jwt, limiter, semaphore
 
 # Event for checking the status of the service and the database
-@app.route('/status', methods=['GET'])
+@app.route('/api/calendar/status', methods=['GET'])
 def status():
     try:
         semaphore.acquire()
@@ -18,7 +18,7 @@ def status():
         semaphore.release()
 
 # Event for creating a new calendar
-@app.route('/create_calendar', methods=['POST'])
+@app.route('/api/calendar/create_calendar', methods=['POST'])
 @jwt_required()
 @limiter.limit("5 per minute")
 def create_calendar():
@@ -38,7 +38,7 @@ def create_calendar():
         semaphore.release()
 
 # Event for joining a calendar
-@app.route('/join_calendar', methods=['POST'])
+@app.route('/api/calendar/join_calendar', methods=['POST'])
 @jwt_required()
 @limiter.limit("5 per minute")
 def join_calendar():
@@ -62,7 +62,7 @@ def join_calendar():
         semaphore.release()
 
 # Event for leaving a calendar
-@app.route('/leave_calendar', methods=['POST'])
+@app.route('/api/calendar/leave_calendar', methods=['POST'])
 @jwt_required()
 @limiter.limit("5 per minute")
 def leave_calendar():
@@ -84,7 +84,7 @@ def leave_calendar():
         semaphore.release()
 
 # Event for creating a new event
-@app.route('/create_event', methods=['POST'])
+@app.route('/api/calendar/create_event', methods=['POST'])
 @jwt_required()
 @limiter.limit("5 per minute")
 def create_event():
@@ -110,7 +110,7 @@ def create_event():
         semaphore.release()
 
 # Event for getting all events in a calendar
-@app.route('/get_events', methods=['GET'])
+@app.route('/api/calendar/get_events', methods=['GET'])
 @jwt_required()
 @limiter.limit("5 per minute")
 def get_events():

@@ -4,7 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_tok
 from __main__ import app, db, jwt, limiter, semaphore
 from models.model import User
 
-@app.route('/status', methods=['GET'])
+@app.route('/api/user/status', methods=['GET'])
 def status():
     try:
         semaphore.acquire()
@@ -14,7 +14,7 @@ def status():
     finally:
         semaphore.release()
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/user/register', methods=['POST'])
 @limiter.limit("5 per minute")
 def register():
     try:
@@ -40,7 +40,7 @@ def register():
     finally:
         semaphore.release()
     
-@app.route('/login', methods=['POST'])
+@app.route('/api/user/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
     try:
