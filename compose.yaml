@@ -1,14 +1,13 @@
-# version: "3.8"
+# version: "2"
 
 services:
   user-management-service:
     build:
       context: ./user-management-service
-    container_name: user-management-service
     depends_on:
       - user-management-db
-    ports:
-      - "5001:5001"
+    deploy:
+      replicas: 3
     env_file:
       - user-management-db/.env
     networks:
@@ -25,16 +24,39 @@ services:
     networks:
       - main-network
 
-  calendar-service:
+  calendar-service-1:
     build:
       context: ./calendar-service
-    container_name: calendar-service
     depends_on:
       - calendar-db
     env_file:
       - calendar-db/.env
     ports:
       - "5002:5002"
+    networks:
+      - main-network
+
+  calendar-service-2:
+    build:
+      context: ./calendar-service
+    depends_on:
+      - calendar-db
+    env_file:
+      - calendar-db/.env
+    ports:
+      - "5003:5002"
+    networks:
+      - main-network
+
+  calendar-service-3:
+    build:
+      context: ./calendar-service
+    depends_on:
+      - calendar-db
+    env_file:
+      - calendar-db/.env
+    ports:
+      - "5004:5002"
     networks:
       - main-network
 
@@ -59,6 +81,7 @@ services:
       - user-management-service
       - calendar-service
       - redis
+      - consul
     networks:
       - main-network
 
@@ -69,6 +92,14 @@ services:
       - "6379:6379"
     networks:
       - main-network
+
+  consul:
+    build: ./service-discovery
+    container_name: consul
+    ports:
+      - "8500:8500"
+    networks:
+      - main-network 
 
 networks:
   main-network:
