@@ -1,8 +1,67 @@
 from flask import request, jsonify, session
+from flask_socketio import emit, join_room, leave_room
 from models.model import Calendar, Event, UserCalendar
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from __main__ import app, db, jwt, limiter, semaphore
+from __main__ import app, db, jwt, limiter, semaphore, socketio
+
+@socketio.on('connect')
+@jwt_required()
+def connect():
+    print('Connected')
+    emit('message', f"{request.sid} has connected")
+
+@socketio.on('disconnect')
+@jwt_required()
+def disconnect():
+    print('Disconnected')
+    emit('message', f"{request.sid} has disconnected")
+
+@socketio.on('message')
+@jwt_required()
+def message(data):
+    print(f"Message: {data}")
+    emit('message', data)
+
+# @socketio.on("created_event")
+# def created_event(data):
+#     print(f"Event created: {data}")
+#     emit("event_created", data)
+
+@socketio.on("join_calendar")
+@jwt_required()
+def join_calendar(data):
+    username = get_jwt_identity()
+    calendar_name = data['calendar_name']
+    calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
+    if not calendar:
+        emit("message", "Calendar does not exist")
+    user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
+    if user_calendar:
+        emit("message", "User in calendar")
+    user_calendar = UserCalendar(username=username, calendar_id=calendar.id)
+    db.session.add(user_calendar)
+    db.session.commit()
+
+    join_room(calendar_name)
+    emit("message", f"Joined calendar {calendar_name}")
+
+@socketio.on("leave_calendar")
+@jwt_required()
+def leave_calendar(data):
+    username = get_jwt_identity()
+    calendar_name = data['calendar_name']
+    calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
+    if not calendar:
+        emit("message", "Calendar does not exist")
+    user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
+    if not user_calendar:
+        emit("message", "User not in calendar")
+    db.session.delete(user_calendar)
+    db.session.commit()
+
+    leave_room(calendar_name)
+    emit("message", f"Left calendar {calendar_name}")
 
 # Event for checking the status of the service and the database
 @app.route('/api/calendar/status', methods=['GET'])
@@ -38,50 +97,63 @@ def create_calendar():
         semaphore.release()
 
 # Event for joining a calendar
-@app.route('/api/calendar/join_calendar', methods=['POST'])
-@jwt_required()
-@limiter.limit("5 per minute")
-def join_calendar():
-    try:
-        semaphore.acquire()
-        data = request.get_json()
-        username = get_jwt_identity()
-        print(username)
-        calendar_name = data['calendar_name']
-        calendar_password = data['calendar_password']
-        calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
-        if not calendar:
-            return jsonify({'message': 'Calendar does not exist'}), 404
-        if calendar.calendar_password != calendar_password:
-            return jsonify({'message': 'Incorrect password'}), 401
-        user_calendar = UserCalendar(username=username, calendar_id=calendar.id)
-        db.session.add(user_calendar)
-        db.session.commit()
-        return jsonify({'message': 'Joined calendar'}), 200
-    finally:
-        semaphore.release()
+# @app.route('/api/calendar/join_calendar', methods=['POST'])
+# @jwt_required()
+# @limiter.limit("5 per minute")
+# def join_calendar():
+#     try:
+#         semaphore.acquire()
+#         data = request.get_json()
+#         username = get_jwt_identity()
+#         print(username)
+#         calendar_name = data['calendar_name']
+#         calendar_password = data['calendar_password']
+#         calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
+#         if not calendar:
+#             return jsonify({'message': 'Calendar does not exist'}), 404
+#         if calendar.calendar_password != calendar_password:
+#             return jsonify({'message': 'Incorrect password'}), 401
+#         user_calendar = UserCalendar(username=username, calendar_id=calendar.id)
+#         db.session.add(user_calendar)
+#         db.session.commit()
+
+#         # Join the room for the calendar
+#         socketio.join_room(calendar_name)
+
+#         # Emit event to all users in the calendar
+#         socketio.emit("joined_calendar", {f"username {username} joined calendar {calendar_name}"})
+#         return jsonify({'message': 'Joined calendar'}), 200
+#     finally:
+#         semaphore.release()
 
 # Event for leaving a calendar
-@app.route('/api/calendar/leave_calendar', methods=['POST'])
-@jwt_required()
-@limiter.limit("5 per minute")
-def leave_calendar():
-    try:
-        semaphore.acquire()
-        data = request.get_json()
-        username = get_jwt_identity()
-        calendar_name = data['calendar_name']
-        calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
-        if not calendar:
-            return jsonify({'message': 'Calendar not found'}), 404
-        user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
-        if not user_calendar:
-            return jsonify({'message': 'User not in calendar'}), 404
-        db.session.delete(user_calendar)
-        db.session.commit()
-        return jsonify({'message': 'Left calendar'}), 200
-    finally:
-        semaphore.release()
+# @app.route('/api/calendar/leave_calendar', methods=['POST'])
+# @jwt_required()
+# @limiter.limit("5 per minute")
+# def leave_calendar():
+#     try:
+#         semaphore.acquire()
+#         data = request.get_json()
+#         username = get_jwt_identity()
+#         calendar_name = data['calendar_name']
+#         calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
+#         if not calendar:
+#             return jsonify({'message': 'Calendar not found'}), 404
+#         user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
+#         if not user_calendar:
+#             return jsonify({'message': 'User not in calendar'}), 404
+#         db.session.delete(user_calendar)
+#         db.session.commit()
+
+#         # Leave the room for the calendar
+#         socketio.leave_room(calendar_name)
+
+#         # Emit event to all users in the calendar
+#         socketio.emit("left_calendar", {'username': username, 'calendar_name': calendar_name})
+
+#         return jsonify({'message': 'Left calendar'}), 200
+#     finally:
+#         semaphore.release()
 
 # Event for creating a new event
 @app.route('/api/calendar/create_event', methods=['POST'])
@@ -105,6 +177,10 @@ def create_event():
         new_event = Event(event_name=event_name, event_start=event_start, event_end=event_end, created_by=username, calendar_id=calendar.id)
         db.session.add(new_event)
         db.session.commit()
+
+        # Emit event to all users in the calendar
+        socketio.emit("created_event", f"New event {event_name} created by {username}", room=calendar_name)
+
         return jsonify({'message': 'New event created'}), 201
     finally:
         semaphore.release()

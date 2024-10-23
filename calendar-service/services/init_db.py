@@ -1,7 +1,7 @@
 from main import create_app, db, Calendar, Event, UserCalendar
 
 def init_db(db):
-    app, db, jwt, limiter, semaphore = create_app(db)
+    app, db, jwt, limiter, semaphore, socketio = create_app(db)
     with app.app_context():
         db.create_all()
         if db.session.query(Calendar).filter_by(calendar_name='test').first():
