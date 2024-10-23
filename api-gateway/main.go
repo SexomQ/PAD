@@ -17,6 +17,9 @@ func main() {
 	// Create a new router
 	r := mux.NewRouter()
 
+	// Status endpoint
+	r.HandleFunc("/api/status", handlers.StatusHandler)
+
 	// User-related routes
 	r.PathPrefix("/api/user/").HandlerFunc(handlers.UserHandler)
 

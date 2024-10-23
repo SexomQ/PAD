@@ -20,6 +20,14 @@ type RequestBody struct {
 	CalendarPassword string `json:"calendar_password"`
 }
 
+type Event struct {
+	Username     string `json:"username"`
+	EventName    string `json:"event_name"`
+	EventStart   string `json:"event_start"`
+	EventEnd     string `json:"event_end"`
+	CalendarName string `json:"calendar_name"`
+}
+
 func CalendarHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if the request body is empty
 	if r.Body == nil {
@@ -35,18 +43,39 @@ func CalendarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Parse the JSON body to extract the username
-	var requestBody RequestBody
-	err = json.Unmarshal(bodyBytes, &requestBody)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+	var username string
 
-	username := requestBody.Username
-	if username == "" {
-		http.Error(w, "Username not provided", http.StatusBadRequest)
-		return
+	if r.URL.Path == "/api/calendar/create_event" {
+		var event Event
+		err = json.Unmarshal(bodyBytes, &event)
+		if err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+
+		}
+		if event.EventName == "" || event.EventStart == "" || event.EventEnd == "" || event.CalendarName == "" {
+			http.Error(w, "Missing event details", http.StatusBadRequest)
+			return
+		}
+		username = event.Username
+		if username == "" {
+			http.Error(w, "Username not provided", http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Parse the JSON body to extract the username
+		var requestBody RequestBody
+		err = json.Unmarshal(bodyBytes, &requestBody)
+		if err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		username = requestBody.Username
+		if username == "" {
+			http.Error(w, "Username not provided", http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Initialize Redis client
@@ -58,6 +87,8 @@ func CalendarHandler(w http.ResponseWriter, r *http.Request) {
 	tokenKey := fmt.Sprintf("jwt_token_%s", username)
 	token, err := rdb.Get(ctx, tokenKey).Result()
 	if err == redis.Nil {
+		// Get error with the username
+		fmt.Println(username)
 		http.Error(w, "JWT token not found for user", http.StatusUnauthorized)
 		return
 	} else if err != nil {

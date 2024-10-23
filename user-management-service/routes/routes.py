@@ -2,12 +2,14 @@ from flask import Flask, request, session, jsonify
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from __main__ import app, db, jwt, limiter, semaphore
+import time
 from models.model import User
 
 @app.route('/api/user/status', methods=['GET'])
 def status():
     try:
         semaphore.acquire()
+        time.sleep(10)
         users = db.session.query(User).all()
         if users:
             return jsonify({'message': 'Service and database are up and running'}), 200
