@@ -5,8 +5,8 @@ def register_service():
     consul_client = consul.Consul(host='consul', port=8500)
 
     service_address = socket.gethostbyname(socket.gethostname())
-    service_id = f'user_service-{service_address}'
-    service_name = 'user_service'
+    service_id = f'user-management-service-{service_address}'
+    service_name = 'user-management-service'
     service_port = 5001
 
     consul_client.agent.service.register(

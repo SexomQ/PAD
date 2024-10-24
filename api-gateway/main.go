@@ -2,6 +2,7 @@ package main
 
 import (
 	"gateway/handlers"
+	"gateway/load_balancers"
 	"gateway/middleware"
 	"log"
 	"net/http"
@@ -14,11 +15,17 @@ func main() {
 	// Initialize Redis
 	middleware.InitRedis()
 
+	// Update the service cache
+	go load_balancers.PeriodicallyUpdateServiceCache()
+
 	// Create a new router
 	r := mux.NewRouter()
 
-	// Status endpoint
+	// Status endpoint gateway
 	r.HandleFunc("/api/status", handlers.StatusHandler)
+
+	// Status endpoint service discovery
+	r.HandleFunc("/api/service_discovery", handlers.ServiceDiscoveryHandler)
 
 	// User-related routes
 	r.PathPrefix("/api/user/").HandlerFunc(handlers.UserHandler)

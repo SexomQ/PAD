@@ -1,22 +1,23 @@
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, session, jsonify, Blueprint
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
-from __main__ import app, db, jwt, limiter, semaphore
+from main import app, db, jwt, limiter, semaphore
 import time
 from models.model import User
 
-@app.route('/api/user/status', methods=['GET'])
+user = Blueprint('user', __name__)
+
+@user.route('/api/user/status', methods=['GET'])
 def status():
     try:
         semaphore.acquire()
-        time.sleep(10)
         users = db.session.query(User).all()
         if users:
             return jsonify({'message': 'Service and database are up and running'}), 200
     finally:
         semaphore.release()
 
-@app.route('/api/user/register', methods=['POST'])
+@user.route('/api/user/register', methods=['POST'])
 @limiter.limit("5 per minute")
 def register():
     try:
@@ -42,7 +43,7 @@ def register():
     finally:
         semaphore.release()
     
-@app.route('/api/user/login', methods=['POST'])
+@user.route('/api/user/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
     try:

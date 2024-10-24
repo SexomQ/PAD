@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gateway/load_balancers"
 	"io"
 	"net/http"
 	"time"
@@ -29,6 +30,22 @@ type Event struct {
 }
 
 func CalendarHandler(w http.ResponseWriter, r *http.Request) {
+
+	var serviceURL string
+
+	if r.URL.Path == "/api/calendar/create_event" {
+		serviceURL = "http://calendar-service-1:5002"
+	} else {
+		// load balancer
+		serviceName := "calendar-service"
+		serviceURL = load_balancers.RoundRobinLoadBalancer(serviceName)
+	}
+
+	if serviceURL == "" {
+		http.Error(w, "Service not in Queue", http.StatusNotFound)
+		return
+	}
+
 	// Check if the request body is empty
 	if r.Body == nil {
 		http.Error(w, "Request body is empty", http.StatusBadRequest)
@@ -97,7 +114,6 @@ func CalendarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create a new request to the calendar service
-	serviceURL := "http://calendar-service:5002"
 	target := fmt.Sprintf("%s%s", serviceURL, r.RequestURI)
 	req, err := http.NewRequest(r.Method, target, io.NopCloser(bytes.NewReader(bodyBytes)))
 	if err != nil {

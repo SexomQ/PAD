@@ -10,35 +10,35 @@ from dotenv import load_dotenv
 from models.model import User
 from models.database import db
 
-def create_app(db):
-    load_dotenv(os.path.join(os.path.dirname(__file__), '../user-management-db/.env'))
 
-    app = Flask(__name__)
+load_dotenv(os.path.join(os.path.dirname(__file__), '../user-management-db/.env'))
 
-    db_user = os.getenv('POSTGRES_USER')
-    db_password = os.getenv('POSTGRES_PASSWORD')
-    db_name = os.getenv('POSTGRES_DB')
-    db_host = os.getenv('POSTGRES_HOST')
-    db_port = os.getenv('POSTGRES_PORT')
+app = Flask(__name__)
 
-    print(f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}')
+db_user = os.getenv('POSTGRES_USER')
+db_password = os.getenv('POSTGRES_PASSWORD')
+db_name = os.getenv('POSTGRES_DB')
+db_host = os.getenv('POSTGRES_HOST')
+db_port = os.getenv('POSTGRES_PORT')
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.secret_key = 'super secret key'
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=1)
+print(f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}')
 
-    jwt = JWTManager(app)
-    limiter = Limiter(get_remote_address, default_limits=["5 per minute"])
-    semaphore = BoundedSemaphore(2) # 2 concurrent requests
+app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'super secret key'
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=1)
 
-    db.init_app(app)
-    limiter.init_app(app)
+jwt = JWTManager(app)
+limiter = Limiter(get_remote_address, default_limits=["5 per minute"])
+semaphore = BoundedSemaphore(2) # 2 concurrent requests
 
-    return app, db, jwt, limiter, semaphore
+db.init_app(app)
+limiter.init_app(app)
+
+    # return app, db, jwt, limiter, semaphore
     
 
 if __name__ == '__main__':
-    app, db, jwt, limiter, semaphore = create_app(db)
-    import routes.routes
+    from routes.routes import user
+    app.register_blueprint(user)
     app.run(host='0.0.0.0', port=5001)

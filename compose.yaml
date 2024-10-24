@@ -24,6 +24,18 @@ services:
     networks:
       - main-network
 
+  # calendar-service:
+  #     build:
+  #       context: ./calendar-service
+  #     depends_on:
+  #       - calendar-db
+  #     env_file:
+  #       - calendar-db/.env
+  #     deploy:
+  #       replicas: 3
+  #     networks:
+  #       - main-network
+
   calendar-service-1:
     build:
       context: ./calendar-service
@@ -79,7 +91,9 @@ services:
       - "8080:8080"
     depends_on:
       - user-management-service
-      - calendar-service
+      - calendar-service-1
+      - calendar-service-2
+      - calendar-service-3
       - redis
       - consul
     networks:

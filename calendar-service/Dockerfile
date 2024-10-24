@@ -48,4 +48,4 @@ COPY . .
 EXPOSE 5002
 
 # Run the application.
-CMD ["sh", "-c", "python3 -m services.init_db && exec python3 -m main"]
+CMD ["sh", "-c", "python3 -m services.init_db && python3 -m services.register_service && exec python3 -m main"]
