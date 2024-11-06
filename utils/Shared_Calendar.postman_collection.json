@@ -1,0 +1,258 @@
+{
+	"info": {
+		"_postman_id": "beb6b7d7-79e8-4400-b755-c9864b0d3dd4",
+		"name": "Shared Calendar",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29611715"
+	},
+	"item": [
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"Tudor\",\n    \"password\" : \"test1234\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/user/login",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"user",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"sexomq1\",\n    \"password\" : \"test1234\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/user/login",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"user",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "check redis",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\":\"sexomq\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/redis",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"redis"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get_events",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"sexomq\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/calendar/get_events",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"calendar",
+						"get_events"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "user status",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/user/status",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"user",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create_calendar",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcyOTgwMDgxNCwianRpIjoiOWM1Yjk4NzYtZjk2YS00YTIzLWI3NWYtMjk5OTQyMjI1Y2NmIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IkNyaXN0aW5hIiwibmJmIjoxNzI5ODAwODE0LCJjc3JmIjoiZDY3NjFjMmQtOTJlOS00ZTc2LTk2MjctNjZiMDBhMDdiOTViIiwiZXhwIjoxNzI5ODg3MjE0fQ.bJpYq7OlxiYhl-mn1f0iewcUZlUE-Kp7HfkPwVZrUjM",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"calendar_name\":\"socketTest\",\n    \"calendar_password\": \"test123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/calendar/create_calendar",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"calendar",
+						"create_calendar"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "create_event",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcyOTgwMDc2NiwianRpIjoiNTg1YjAwZmUtZjcwNS00NzA2LTg3NWYtMTEwZGYzMjNmMzMwIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IlR1ZG9yIiwibmJmIjoxNzI5ODAwNzY2LCJjc3JmIjoiZTQ0YzNlNzEtMjU3OC00NDJhLWJhY2EtOGMzZjY1ZDljMjM3IiwiZXhwIjoxNzI5ODg3MTY2fQ.DIuOtkmeHPxl2G1Z_a78T4uXVre-eFqWdHh_F3zGw80",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"event_name\":\"Socket Day\",\n    \"event_start\":\"2024-10-30T00:00:00.000Z\",\n    \"event_end\":\"2024-10-31T00:00:00.000Z\",\n    \"calendar_name\":\"socketTest\",\n    \"username\": \"Tudor\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://127.0.0.1:8080/api/calendar/create_event",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"calendar",
+						"create_event"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
