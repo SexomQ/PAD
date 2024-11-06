@@ -51,6 +51,8 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := client.Do(req)
 		if err != nil {
+			// Print error and return
+			fmt.Println("Error timeout:", err)
 			return err
 		}
 		defer resp.Body.Close()
@@ -69,14 +71,14 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 					key := fmt.Sprintf("jwt_token_%s", username) // Store with unique username
 					err := middleware.RedisClient.Set(ctx, key, token, 24*time.Hour).Err()
 					if err != nil {
-						return errors.New("Failed to store token in Redis")
+						return errors.New("failed to store token in Redis")
 					}
 				} else {
-					return errors.New("Username missing in login response")
+					return errors.New("username missing in login response")
 
 				}
 			} else {
-				return errors.New("Token missing in login response")
+				return errors.New("token missing in login response")
 			}
 		}
 

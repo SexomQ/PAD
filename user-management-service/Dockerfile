@@ -48,4 +48,5 @@ COPY . .
 EXPOSE 5001
 
 # Run the application.
-CMD ["sh", "-c", "python3 -m services.init_db && python3 -m services.register_service && pytest --disable-warnings && exec python3 -m main"]
+# CMD ["sh", "-c", "python3 -m services.init_db && python3 -m services.register_service && pytest --disable-warnings && exec python3 -m main"]
+CMD ["sh", "-c", "python3 -m services.init_db && python3 -m services.register_service && exec python3 -m main"]

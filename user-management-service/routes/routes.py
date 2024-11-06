@@ -10,6 +10,7 @@ user = Blueprint('user', __name__)
 @user.route('/api/user/status', methods=['GET'])
 def status():
     try:
+        # time.sleep(10)
         semaphore.acquire()
         users = db.session.query(User).all()
         if users:
@@ -22,6 +23,7 @@ def status():
 def register():
     try:
         semaphore.acquire()
+        # time.sleep(5)
         # Get credentials from json 
         credentials = request.get_json()
 
@@ -60,5 +62,7 @@ def login():
         jwt_token = create_access_token(identity=username)
         
         return jsonify({"message": "Logged in successfully!", "token" : jwt_token, "username" : user.username}), 200
+    except Exception as e:
+        return str(e), 500
     finally:
         semaphore.release()

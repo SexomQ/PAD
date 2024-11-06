@@ -21,7 +21,7 @@ def disconnect():
 @jwt_required()
 def message(data):
     print(f"Message: {data}")
-    emit('message', data)
+    emit('message', data, broadcast=True)
 
 # @socketio.on("created_event")
 # def created_event(data):
@@ -35,16 +35,16 @@ def join_calendar(data):
     calendar_name = data['calendar_name']
     calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
     if not calendar:
-        emit("message", "Calendar does not exist")
+        emit("message", "Calendar does not exist", broadcast=True)
     user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
     if user_calendar:
-        emit("message", "User in calendar")
+        emit("message", "User in calendar", room=calendar_name)
     user_calendar = UserCalendar(username=username, calendar_id=calendar.id)
     db.session.add(user_calendar)
     db.session.commit()
 
     join_room(calendar_name)
-    emit("message", f"Joined calendar {calendar_name}")
+    emit("message", f"Joined calendar {calendar_name}", room=calendar_name, broadcast=True)
 
 @socketio.on("leave_calendar")
 @jwt_required()
@@ -156,34 +156,28 @@ def create_calendar():
 #         semaphore.release()
 
 # Event for creating a new event
-@app.route('/api/calendar/create_event', methods=['POST'])
+@socketio.on('create_event')
 @jwt_required()
-@limiter.limit("5 per minute")
-def create_event():
-    try:
-        semaphore.acquire()
-        data = request.get_json()
-        username = get_jwt_identity()
-        event_name = data['event_name']
-        event_start = data['event_start']
-        event_end = data['event_end']
-        calendar_name = data['calendar_name']
-        calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
-        if not calendar:
-            return jsonify({'message': 'Calendar does not exist'}), 404
-        user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
-        if not user_calendar:
-            return jsonify({'message': 'User not in calendar'}), 404
-        new_event = Event(event_name=event_name, event_start=event_start, event_end=event_end, created_by=username, calendar_id=calendar.id)
-        db.session.add(new_event)
-        db.session.commit()
+def create_event(data):
+    username = get_jwt_identity()
+    event_name = data['event_name']
+    event_start = data['event_start']
+    event_end = data['event_end']
+    calendar_name = data['calendar_name']
+    calendar = Calendar.query.filter_by(calendar_name=calendar_name).first()
+    if not calendar:
+        return jsonify({'message': 'Calendar does not exist'}), 404
+    user_calendar = UserCalendar.query.filter_by(username=username, calendar_id=calendar.id).first()
+    if not user_calendar:
+        return jsonify({'message': 'User not in calendar'}), 404
+    new_event = Event(event_name=event_name, event_start=event_start, event_end=event_end, created_by=username, calendar_id=calendar.id)
+    db.session.add(new_event)
+    db.session.commit()
 
-        # Emit event to all users in the calendar
-        socketio.emit("created_event", f"New event {event_name} created by {username}", room=calendar_name)
+    # Emit event to all users in the calendar
+    emit("created_event", f"New event {event_name} created by {username}", room=calendar_name)
+    print(f"New event {event_name} created by {username}")
 
-        return jsonify({'message': 'New event created'}), 201
-    finally:
-        semaphore.release()
 
 # Event for getting all events in a calendar
 @app.route('/api/calendar/get_events', methods=['GET'])
