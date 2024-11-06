@@ -26,9 +26,13 @@ In the Shared Calendar App, the following services are developed:
 
 #### Architecture Diagram:
 
+**Version 1**
 ![Architecture Design](utils/ArchitectureDesign.png)
 
-### 3. Technology Stack and Communication Patterns
+**Version 2**
+![Architecture Design](utils/ArchitectureDesign2.png)
+
+### 3. Technology Stack, Communication Patterns and Additional Implementations
 
 Each service requires a dedicated technology stack and well-defined communication patterns for inter-service communication:
 
@@ -60,6 +64,29 @@ Each service requires a dedicated technology stack and well-defined communicatio
   - The Authentication Service will provide JWT tokens that are passed to the Calendar Service for secure communication and validation within socket rooms.
 - **gRPC (for Gateway Communication)**:
   - The Gateway Component will handle incoming requests, verify JWT tokens, and route requests to the appropriate service (Authentication or Calendar).
+
+**High Availability Strategies**:
+
+- **Load Balancing**: The Gateway Component distributes incoming requests across multiple instances of each service to balance the load.
+- **Redundant Service Instances**: Each service is deployed in multiple instances to ensure redundancy.
+- **Circuit Breaker Mechanism**: Implemented within the Gateway Component to handle unstable service conditions.
+- **Caching with Redis**: Frequently requested data, such as authentication tokens and user session data, is cached.
+- **Database Replication**: Each PostgreSQL database is configured with primary-replica replication.
+
+**Monitoring and Logging**:
+
+To maintain system reliability and provide real-time visibility into the application’s performance, **Prometheus** and **Grafana** is utilized for monitoring, logging, and visualization.
+
+**Saga Pattern**:
+
+To maintain consistency across multiple databases, the application uses a **Saga Pattern** for operations that involve multiple services or databases.
+
+The `create_event` endpoint in the Calendar Service initiates a transaction across multiple databases (e.g., updating the event data in the Calendar Service’s PostgreSQL database and adding a participant record in the Authentication Service’s database).
+
+#### Benefits:
+
+- **Consistency**: Ensures both services either succeed together or fail, maintaining data integrity.
+- **Isolation**: Allows each database to function independently but coordinate with others during critical operations.
 
 ### 4. Design Data Management
 

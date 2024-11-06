@@ -1,0 +1,81 @@
+@startuml
+actor User
+
+frame "Docker Container: Gateway & Load Balancers" {
+  [Gateway] as Gateway
+  [Load balancer] as LB1
+  [Load balancer] as LB2
+}
+frame "Docker Container: Service Discovery" {
+  [Service Discovery] as SD
+}
+frame "Docker Container: Calendar Service (1)" {
+  [Calendar Service (1)] as CS1
+}
+frame "Docker Container: User Management Service 1" {
+  [User Management Service (1)] as UM1
+}
+frame "Docker Container: Cache" {
+  [Cache] as Cache
+}
+frame "Docker Container: Redis R1" {
+  database Redis_R1
+}
+frame "Docker Container: Redis R2" {
+  database Redis_R2
+}
+frame "Docker Container: Redis R3" {
+  database Redis_R3
+}
+frame "Docker Container: Calendar Service DB" {
+  database Postgre_Calendar
+}
+frame "Docker Container: User Service DB R1" {
+  database Postgre_User_R1
+}
+frame "Docker Container: User Service DB R2" {
+  database Postgre_User_R2
+}
+frame "Docker Container: User Service DB R3" {
+  database Postgre_User_R3
+}
+frame "Docker Container: Data Warehouse" {
+  database Postgre_Warehouse
+}
+frame "Docker Container: Logging" {
+  [Logging] as Logs
+}
+
+User --> Gateway
+
+Gateway --> LB1 
+Gateway --> LB2
+Gateway --> SD
+Gateway --> Cache
+
+Cache --> Redis_R1
+Redis_R1 .. Redis_R2
+Redis_R1 .. Redis_R3
+Redis_R2 .. Redis_R3
+
+LB1 --> CS1 : HTTP
+LB2 --> UM1 : HTTP
+
+User ..> CS1 : WebSocket
+
+CS1 --> Postgre_Calendar 
+
+UM1 --> Postgre_User_R1
+UM1 --> Postgre_User_R2
+UM1 --> Postgre_User_R3
+
+Postgre_User_R1 --> Postgre_User_R2
+Postgre_User_R1 --> Postgre_User_R3
+
+Postgre_User_R1 --> Postgre_Warehouse : ETL
+Postgre_Calendar --> Postgre_Warehouse : ETL
+
+CS1 --> Logs : ELK 
+UM1 --> Logs : ELK
+
+@enduml
