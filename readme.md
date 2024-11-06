@@ -94,114 +94,166 @@ Each service will have its own database or data management strategy to ensure in
 
 #### Endpoints for Authentication Service:
 
-- **POST /users/register**: Registers a new user.
+- **POST /user/register**: Registers a new user.
 
-  - Request Body:
+  - **Rate Limit**: 5 requests per minute.
+  - **Request Body**:
     ```json
     {
       "username": "string",
       "password": "string"
     }
     ```
-  - Response Codes:
+  - **Response Codes**:
     - **201 Created**: User was successfully registered.
     - **400 Bad Request**: Invalid input (e.g., missing username or password).
     - **409 Conflict**: Username already exists.
 
-- **POST /users/login**: Logs in an existing user.
+- **POST /user/login**: Logs in a user and provides a JWT token upon successful authentication.
 
-  - Request Body:
+  - **Rate Limit**: 5 requests per minute.
+  - **Request Body**:
     ```json
     {
       "username": "string",
       "password": "string"
     }
     ```
-  - Response:
-    ```json
-    {
-      "token": "JWT_token"
-    }
-    ```
-  - Response Codes:
-    - **200 OK**: Successfully authenticated and token returned.
-    - **401 Unauthorized**: Invalid username or password.
-    - **400 Bad Request**: Malformed request (e.g., missing fields).
+  - **Response Codes**:
+    - **200 OK**: Login successful, returns a JWT token.
+      - **Response Body**:
+        ```json
+        {
+          "message": "Logged in successfully!",
+          "token": "string",
+          "username": "string"
+        }
+        ```
+    - **401 Unauthorized**: Invalid credentials (e.g., incorrect username or password).
+    - **500 Internal Server Error**: An unexpected error occurred during login.
 
-- **GET /users/me**: Fetches the details of the logged-in user (using JWT).
-  - Response:
-    ```json
-    {
-      "username": "string",
-      "userId": "string"
-    }
-    ```
-  - Response Codes:
-    - **200 OK**: User information successfully retrieved.
-    - **401 Unauthorized**: JWT token is missing or invalid.
-    - **403 Forbidden**: User does not have permission to access the requested resource.
+- **GET /user/status**: Checks if the service and database are operational.
+
+  - **Response Codes**:
+    - **200 OK**: Service and database are up and running.
+      - **Response Body**:
+        ```json
+        {
+          "message": "Service and database are up and running"
+        }
+        ```
 
 #### Real-Time Calendar Data (Python + Sockets):
 
 Users will interact with the calendar service via socket connections. Here’s how rooms and events work:
 
-1. **Create Room**: When a group (family or friends) starts using the calendar, a new room (socket namespace) is created. Each room can have multiple users.
-   - Example: Room for "Family A" created.
-2. **Join Room**: Users join a room to collaborate on events.
-   - Example: A user joins "Family A" room via a socket connection.
-3. **Create/Update Events**: Events are created or updated within a room and broadcasted to all users in that room.
-   - Example Event Data:
-   ```json
-   {
-     "eventId": "string",
-     "eventTitle": "string",
-     "startTime": "datetime",
-     "endTime": "datetime",
-     "participants": ["user1", "user2"]
-   }
-   ```
+Here's the updated documentation for each endpoint and socket event:
 
-#### Calendar Service Flow:
+### HTTP Endpoints
 
-- **Connect to Room**:
+- **GET /calendar/status**: Checks if the calendar service and database are operational.
 
-  - Event: `join_room`
-  - Payload:
+  - **Response Codes**:
+    - **200 OK**: Service and database are up and running.
+      - **Response Body**:
+        ```json
+        {
+          "message": "Service and database are up and running"
+        }
+        ```
+
+- **POST /calendar/create_calendar**: Creates a new calendar.
+
+  - **Rate Limit**: 5 requests per minute.
+  - **Request Body**:
     ```json
     {
-      "roomId": "family_room",
-      "password": "room_psw"
+      "calendar_name": "string",
+      "calendar_password": "string"
     }
     ```
-  - Response Codes:
-    - **200 OK**: Successfully connected to the room.
-    - **401 Unauthorized**: Invalid or missing password.
-    - **404 Not Found**: Room does not exist.
+  - **Response Codes**:
+    - **201 Created**: Calendar successfully created.
+    - **409 Conflict**: Calendar already exists.
 
-- **Create Event**:
+- **GET /calendar/get_events**: Retrieves all events from the calendar the user has joined.
+  - **Rate Limit**: 5 requests per minute.
+  - **Response Codes**:
+    - **200 OK**: Events retrieved successfully.
+      - **Response Body**:
+        ```json
+        {
+          "events": [
+            {
+              "event_name": "string",
+              "event_start": "datetime",
+              "event_end": "datetime",
+              "created_by": "string"
+            }
+          ]
+        }
+        ```
+    - **404 Not Found**: No events found or user is not in a calendar.
 
-  - Event: `create_event`
-  - Payload:
+### WebSocket Events
+
+- **connect**: Establishes a connection to the socket.
+
+  - **Description**: Emits a message when a user connects to the socket.
+  - **Response**: Emits a message confirming the user’s connection.
+
+- **disconnect**: Disconnects from the socket.
+
+  - **Description**: Emits a message when a user disconnects from the socket.
+  - **Response**: Emits a message confirming the user’s disconnection.
+
+- **message**: Broadcasts a message to all users.
+
+  - **Payload**:
     ```json
     {
-      "roomId": "family_room",
-      "eventTitle": "Dinner",
-      "startTime": "datetime",
-      "endTime": "datetime"
+      "message": "string"
     }
     ```
-  - Response Codes:
-    - **201 Created**: Event successfully created and broadcasted.
-    - **400 Bad Request**: Invalid event data (e.g., missing or invalid fields).
-    - **403 Forbidden**: User not allowed to create events in this room.
+  - **Response**: Broadcasts the message to all connected users.
 
-- **Broadcast Update**:
-  - Event: `update_event`
-  - Broadcasted to all room members when an event is created or updated.
-  - Response Codes:
-    - **200 OK**: Event update successfully broadcasted.
-    - **400 Bad Request**: Invalid event data.
-    - **404 Not Found**: Event does not exist.
+- **join_calendar**: Joins a specified calendar room.
+
+  - **Payload**:
+    ```json
+    {
+      "calendar_name": "string"
+    }
+    ```
+  - **Response**:
+    - **Success**: Emits a message confirming the user joined the calendar.
+    - **Failure**: Emits a message if the calendar does not exist or the user is already in the calendar.
+
+- **leave_calendar**: Leaves a specified calendar room.
+
+  - **Payload**:
+    ```json
+    {
+      "calendar_name": "string"
+    }
+    ```
+  - **Response**:
+    - **Success**: Emits a message confirming the user left the calendar.
+    - **Failure**: Emits a message if the calendar does not exist or the user was not in the calendar.
+
+- **create_event**: Creates a new event in the specified calendar.
+  - **Payload**:
+    ```json
+    {
+      "event_name": "string",
+      "event_start": "datetime",
+      "event_end": "datetime",
+      "calendar_name": "string"
+    }
+    ```
+  - **Response**:
+    - **Success**: Emits a message to all users in the calendar room about the new event.
+    - **Failure**: Returns a message if the calendar does not exist or if the user is not a member of the calendar.
 
 ### 5. Set Up Deployment and Scaling
 
@@ -210,3 +262,49 @@ To manage and deploy our microservices efficiently, we will employ containerizat
 - **Docker**: Each service will run in its own Docker container, providing isolation and simplifying deployment.
 
 - **Scaling**: The system will use horizontal scaling multiplying the instances of the services using Docker Compose.
+
+### 6. Running and Deploying the Project
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/SexomQ/PAD
+cd PAD
+```
+
+2. Set up virtual environments for Python services and install dependencies:
+
+```bash
+cd user-management-service
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+```bash
+cd ../calendar-service
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+3. Set up the dependences for Go:
+
+```bash
+cd ../api-gateway
+go mod download
+```
+
+4. Run the Docker compose
+
+```bash
+cd ..
+docker compose up --build
+```
+
+### 7. Postman Collection
+
+An exported collection of all API endpoints is provided in [postman_collection.json](utils/Shared_Calendar.postman_collection.json).
+
+**To test:**
+Open Postman and import the postman_collection.json.
