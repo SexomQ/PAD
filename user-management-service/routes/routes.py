@@ -19,11 +19,11 @@ def status():
         semaphore.release()
 
 @user.route('/api/user/register', methods=['POST'])
-@limiter.limit("5 per minute")
+# @limiter.limit("5 per minute")
 def register():
     try:
         semaphore.acquire()
-        # time.sleep(5)
+        time.sleep(30)
         # Get credentials from json 
         credentials = request.get_json()
 

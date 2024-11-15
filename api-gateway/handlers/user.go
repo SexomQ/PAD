@@ -1,95 +1,96 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
+	"bytes"
 	"fmt"
 	"gateway/circuit_breaker"
 	"gateway/load_balancers"
-	"gateway/middleware"
 	"io"
 	"net/http"
 	"time"
 )
 
-var (
-	userServiceBreaker = circuit_breaker.NewCircuitBreaker(3, 30*time.Second) // Set limit and timeout
-)
+// var (
+// 	userServiceBreaker = circuit_breaker.NewCircuitBreaker(3, 30*time.Second) // Set limit and timeout
+// )
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	serviceName := "user-management-service"
 
-	serviceURL := load_balancers.RoundRobinLoadBalancer(serviceName)
-	if serviceURL == "" {
-		http.Error(w, "Service not in Queue", http.StatusNotFound)
+	// Buffer the original request body
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
+	r.Body.Close() // Close the original body since it has been read
 
-	target := fmt.Sprintf("%s%s", serviceURL, r.RequestURI)
+	// Maximum retry attempts
+	const maxRetries = 3
+	var attempt int
 
-	// circuit breaker
-	err := userServiceBreaker.Call(func() error {
-		// Simulate a 500 error for testing
-		if SimulateError(r) {
-			return errors.New("simulated service failure with 500 error")
+	for attempt = 1; attempt <= maxRetries; attempt++ {
+		// Get a new service URL on each attempt
+		serviceURL := load_balancers.RoundRobinLoadBalancer(serviceName)
+		if serviceURL == "" {
+			http.Error(w, "Service not in Queue", http.StatusNotFound)
+			return
 		}
 
-		req, err := http.NewRequest(r.Method, target, r.Body)
-		if err != nil {
-			return err
-		}
+		target := fmt.Sprintf("%s%s", serviceURL, r.RequestURI)
 
-		// Forward headers
-		for k, v := range r.Header {
-			req.Header.Set(k, v[0])
-		}
+		// Reset the body for the retry
+		r.Body = io.NopCloser(bytes.NewReader(bodyBytes)) // Recreate the body for each retry
 
-		// Set timeouts
-		client := &http.Client{
-			Timeout: 5 * time.Second,
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			// Print error and return
-			fmt.Println("Error timeout:", err)
-			return err
-		}
-		defer resp.Body.Close()
+		var userServiceBreaker = circuit_breaker.NewCircuitBreaker(3, 30*time.Second)
 
-		body, _ := io.ReadAll(resp.Body)
-
-		// If it's a login, extract the token and store it in Redis
-		if r.URL.Path == "/api/user/login" && resp.StatusCode == http.StatusOK {
-			var data map[string]string
-			json.Unmarshal(body, &data)
-			if token, ok := data["token"]; ok {
-				// Assuming username is also in the response for unique token storage
-				if username, exists := data["username"]; exists {
-					// Cache token in Redis with username as key
-					ctx := context.Background()
-					key := fmt.Sprintf("jwt_token_%s", username) // Store with unique username
-					err := middleware.RedisClient.Set(ctx, key, token, 24*time.Hour).Err()
-					if err != nil {
-						return errors.New("failed to store token in Redis")
-					}
-				} else {
-					return errors.New("username missing in login response")
-
-				}
-			} else {
-				return errors.New("token missing in login response")
+		// Attempt the request with the circuit breaker
+		err = userServiceBreaker.Call(func() error {
+			// Create a new HTTP request
+			req, err := http.NewRequest(r.Method, target, r.Body)
+			if err != nil {
+				return err
 			}
+
+			// Forward all headers, including credentials, from the original request
+			for headerName, headerValues := range r.Header {
+				for _, value := range headerValues {
+					req.Header.Add(headerName, value)
+				}
+			}
+
+			// Set timeouts
+			client := &http.Client{
+				Timeout: 2 * time.Second,
+			}
+
+			// Send the request
+			resp, err := client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer resp.Body.Close()
+
+			// Read the response body
+			body, _ := io.ReadAll(resp.Body)
+
+			// Write the response back to the client
+			w.WriteHeader(resp.StatusCode)
+			w.Write(body)
+			return nil
+		})
+
+		// Break the loop if the request succeeds
+		if err == nil {
+			return
 		}
 
-		w.WriteHeader(resp.StatusCode)
-		w.Write(body)
-		return nil
-	})
-	if err != nil {
-		// If the circuit breaker is tripped, or an error occurs, return service unavailable
-		http.Error(w, "Service unavailable due to circuit breaker: "+err.Error(), http.StatusServiceUnavailable)
+		// Log the error for each attempt
+		fmt.Printf("Attempt %d failed with service %s: %s\n", attempt, serviceURL, err.Error())
 	}
+
+	// If all attempts fail, return service unavailable
+	http.Error(w, "Service unavailable after retries: "+err.Error(), http.StatusServiceUnavailable)
 }
 
 // Simulate a condition to trigger a 500 error
