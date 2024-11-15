@@ -4,6 +4,13 @@ from models.model import Calendar, Event, UserCalendar
 from flask_limiter.util import get_remote_address
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from __main__ import app, db, jwt, limiter, semaphore, socketio
+import logging
+import logstash
+
+# Set up logging
+logger = logging.getLogger('python-logstash-logger')
+logger.setLevel(logging.INFO)
+logger.addHandler(logstash.TCPLogstashHandler('logstash', 5044, version=1))
 
 @socketio.on('connect')
 @jwt_required()
@@ -72,6 +79,7 @@ def status():
         events = Event.query.all()
         user_calendars = UserCalendar.query.all()
         if calendars and events and user_calendars:
+            logger.info('microservice: Service and database are up and running', extra={'service': 'calendar-service' ,'status': 'success'})
             return jsonify({'message': 'Service and database are up and running'}), 200
     finally:
         semaphore.release()
@@ -87,11 +95,13 @@ def create_calendar():
         calendar_name = data['calendar_name']
         calendar_password = data['calendar_password']
         if Calendar.query.filter_by(calendar_name=calendar_name).first():
+            logger.error('microservice: Calendar already exists', extra={'service': 'calendar-service' ,'status': 'error'})
             return jsonify({'message': 'Calendar already exists'}), 409
 
         new_calendar = Calendar(calendar_name=calendar_name, calendar_password=calendar_password)
         db.session.add(new_calendar)
         db.session.commit()
+        logger.info('microservice: New calendar created', extra={'service': 'calendar-service' ,'status': 'success'})
         return jsonify({'message': 'New calendar created'}), 201
     finally:
         semaphore.release()
@@ -189,13 +199,16 @@ def get_events():
         username = get_jwt_identity()
         user_calendar = UserCalendar.query.filter_by(username=username).first()
         if not user_calendar:
+            logger.error('microservice: User not in calendar', extra={'service': 'calendar-service' ,'status': 'error'})
             return jsonify({'message': 'User not in calendar'}), 404
         events = Event.query.filter_by(calendar_id=user_calendar.calendar_id).all()
         if not events:
+            logger.error('microservice: No events found', extra={'service': 'calendar-service' ,'status': 'error'})
             return jsonify({'message': 'No events found'}), 404
         event_list = []
         for event in events:
             event_list.append({'event_name': event.event_name, 'event_start': event.event_start, 'event_end': event.event_end, 'created_by': event.created_by})
+        logger.info('microservice: Events found', extra={'service': 'calendar-service' ,'status': 'success'})
         return jsonify({'events': event_list}), 200
     finally:
         semaphore.release()

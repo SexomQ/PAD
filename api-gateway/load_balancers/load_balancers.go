@@ -110,7 +110,7 @@ func RoundRobinLoadBalancer(serviceName string) string {
 	}
 	serviceUrl := serviceCache[serviceName][loginIndex]
 	loginIndex = (loginIndex + 1) % len(serviceCache[serviceName])
-	fmt.Printf("This is the service url DE LA ROBIN %s", serviceUrl)
+	fmt.Printf("This is the service url DE LA ROBIN %s \n", serviceUrl)
 	return serviceUrl
 }
 
