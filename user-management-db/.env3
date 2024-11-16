@@ -1,0 +1,5 @@
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=password
+POSTGRES_DB=user-management-db-3
+POSTGRES_HOST=user-management-db-3
+POSTGRES_PORT=5432
