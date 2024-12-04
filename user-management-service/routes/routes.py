@@ -117,7 +117,7 @@ def register():
         semaphore.release()
     
 @user.route('/api/user/login', methods=['POST'])
-@limiter.limit("5 per minute")
+# @limiter.limit("5 per minute")
 def login():
     try:
         semaphore.acquire()
