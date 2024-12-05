@@ -44,8 +44,13 @@ type Saga struct {
 	mu    sync.Mutex
 }
 
+type SagaPayload struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // Execute runs the saga, executing actions and compensating on failure.
-func (s *Saga) Execute() error {
+func (s *Saga) Execute(payload SagaPayload) error {
 	var lastCompletedIndex int
 	defer func() {
 		if r := recover(); r != nil {
@@ -55,7 +60,7 @@ func (s *Saga) Execute() error {
 
 	for i, step := range s.Steps {
 		s.mu.Lock()
-		result, err := step.ActionFunc(step.Args...)
+		result, err := step.ActionFunc(append(step.Args, payload)...)
 		s.mu.Unlock()
 
 		if err != nil {

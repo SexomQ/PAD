@@ -1,7 +1,8 @@
 package main
 
 import (
-	"errors"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"gateway/handlers"
 	"gateway/load_balancers"
@@ -40,45 +41,176 @@ func main() {
 	r.HandleFunc("/api/redis", middleware.CheckRedis)
 
 	// Saga initiation
-	builder := &saga.OrchestrationBuilder{}
+	// builder := &saga.OrchestrationBuilder{}
 
-	builder.AddStep(
-		func(args ...interface{}) (interface{}, error) {
-			fmt.Println("Executing step 1")
-			return "Step 1 result", nil
-		},
-		func(args ...interface{}) error {
-			fmt.Println("Compensating step 1")
-			return nil
-		},
-	).AddStep(
-		func(args ...interface{}) (interface{}, error) {
-			fmt.Println("Executing step 2")
-			return "Step 2 result", nil
-		},
-		func(args ...interface{}) error {
-			fmt.Println("Compensating step 2")
-			return nil
-		},
-	).AddStep(
-		func(args ...interface{}) (interface{}, error) {
-			fmt.Println("Executing step 3")
-			return nil, errors.New("step 3 failed")
-		},
-		func(args ...interface{}) error {
-			fmt.Println("Compensating step 3")
-			return errors.New("compensation step 2 failed")
-		},
-	)
+	// builder.AddStep(
+	// 	func(args ...interface{}) (interface{}, error) {
+	// 		fmt.Println("Executing step 1: Login")
+	// 		http.HandleFunc("/api/user/login", handlers.UserHandler)
+	// 		return "Step 1 result", nil
+	// 	},
+	// 	func(args ...interface{}) error {
+	// 		fmt.Println("Compensating step 1")
+	// 		return nil
+	// 	},
+	// ).AddStep(
+	// 	func(args ...interface{}) (interface{}, error) {
+	// 		fmt.Println("Executing step 2")
+	// 		http.HandleFunc("/api/calendar/status", handlers.CalendarHandler)
+	// 		return "Step 2 result", nil
+	// 	},
+	// 	func(args ...interface{}) error {
+	// 		fmt.Println("Compensating step 2")
+	// 		return nil
+	// 	},
+	// )
 
-	builtSaga := builder.Build()
-	// Saga execution route
+	// builder.AddStep(
+	// 	func(args ...interface{}) (interface{}, error) {
+	// 		fmt.Println("Executing step 1: Login")
+
+	// 		// Perform the HTTP request
+	// 		resp, err := http.Post("http://localhost:8080/api/user/login", "application/json", nil)
+	// 		if err != nil {
+	// 			return nil, fmt.Errorf("failed to execute step 1: %v", err)
+	// 		}
+	// 		defer resp.Body.Close()
+
+	// 		// Check the status code
+	// 		if resp.StatusCode != http.StatusOK {
+	// 			return nil, fmt.Errorf("step 1 failed: received status code %d", resp.StatusCode)
+	// 		}
+
+	// 		return "Step 1 result", nil
+	// 	},
+	// 	func(args ...interface{}) error {
+	// 		fmt.Println("Compensating step 1")
+	// 		// Add compensation logic here
+	// 		return nil
+	// 	},
+	// ).AddStep(
+	// 	func(args ...interface{}) (interface{}, error) {
+	// 		fmt.Println("Executing step 2")
+
+	// 		// Perform the HTTP request
+	// 		resp, err := http.Get("http://localhost:8080/api/calendar/status")
+	// 		if err != nil {
+	// 			return nil, fmt.Errorf("failed to execute step 2: %v", err)
+	// 		}
+	// 		defer resp.Body.Close()
+
+	// 		// Check the status code
+	// 		if resp.StatusCode != http.StatusOK {
+	// 			return nil, fmt.Errorf("step 2 failed: received status code %d", resp.StatusCode)
+	// 		}
+
+	// 		return "Step 2 result", nil
+	// 	},
+	// 	func(args ...interface{}) error {
+	// 		fmt.Println("Compensating step 2")
+	// 		// Add compensation logic here
+	// 		return nil
+	// 	},
+	// )
+
+	// builtSaga := builder.Build()
+	// // Saga execution route
+	// r.HandleFunc("/api/execute_saga", func(w http.ResponseWriter, r *http.Request) {
+	// 	err := builtSaga.Execute()
+	// 	if err != nil {
+	// 		http.Error(w, fmt.Sprintf("Saga failed: %v", err), http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// 	w.WriteHeader(http.StatusOK)
+	// 	w.Write([]byte("Saga executed successfully"))
+	// })
+
 	r.HandleFunc("/api/execute_saga", func(w http.ResponseWriter, r *http.Request) {
-		err := builtSaga.Execute()
+		// Step 1: Parse JSON payload
+		var payload saga.SagaPayload
+		err := json.NewDecoder(r.Body).Decode(&payload)
+		if err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		// Step 2: Build the saga
+		builder := &saga.OrchestrationBuilder{}
+
+		builder.AddStep(
+			func(args ...interface{}) (interface{}, error) {
+				fmt.Println("Executing step 1: Login")
+
+				// Extract payload from arguments
+				userPayload := args[0].(saga.SagaPayload)
+
+				// Create JSON payload for the login request
+				loginPayload, _ := json.Marshal(map[string]string{
+					"username": userPayload.Username,
+					"password": userPayload.Password,
+				})
+
+				// Perform the HTTP POST request
+				resp, err := http.Post("http://localhost:8080/api/user/login", "application/json", bytes.NewBuffer(loginPayload))
+				if err != nil {
+					return nil, fmt.Errorf("failed to execute step 1: %v", err)
+				}
+				defer resp.Body.Close()
+
+				// Check the status code
+				if resp.StatusCode != http.StatusOK {
+					return nil, fmt.Errorf("step 1 failed: received status code %d", resp.StatusCode)
+				}
+
+				return "Step 1 result", nil
+			},
+			func(args ...interface{}) error {
+				fmt.Println("Compensating step 1")
+				// Add compensation logic here
+				return nil
+			},
+		).AddStep(
+			func(args ...interface{}) (interface{}, error) {
+				fmt.Println("Executing step 2")
+
+				userPayload := args[0].(saga.SagaPayload)
+
+				// Create JSON payload for the login request
+				statusPayload, _ := json.Marshal(map[string]string{
+					"username": userPayload.Username,
+				})
+
+				// Perform the HTTP GET request
+				resp, err := http.Post("http://localhost:8080/api/calendar/status", "application/json", bytes.NewBuffer(statusPayload))
+				if err != nil {
+					return nil, fmt.Errorf("failed to execute step 2: %v", err)
+				}
+				defer resp.Body.Close()
+
+				// Check the status code
+				if resp.StatusCode != http.StatusOK {
+					return nil, fmt.Errorf("step 2 failed: received status code %d", resp.StatusCode)
+				}
+
+				return "Step 2 result", nil
+			},
+			func(args ...interface{}) error {
+				fmt.Println("Compensating step 2")
+				// Add compensation logic here
+				return nil
+			},
+		)
+
+		// Build the saga
+		builtSaga := builder.Build()
+
+		// Step 3: Execute the saga with the payload
+		err = builtSaga.Execute(saga.SagaPayload(payload))
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Saga failed: %v", err), http.StatusInternalServerError)
 			return
 		}
+
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Saga executed successfully"))
 	})

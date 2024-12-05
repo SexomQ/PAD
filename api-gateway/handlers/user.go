@@ -2,17 +2,16 @@ package handlers
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"gateway/circuit_breaker"
 	"gateway/load_balancers"
+	"gateway/middleware"
 	"io"
 	"net/http"
 	"time"
 )
-
-// var (
-// 	userServiceBreaker = circuit_breaker.NewCircuitBreaker(3, 30*time.Second) // Set limit and timeout
-// )
 
 func UserHandler(w http.ResponseWriter, r *http.Request) {
 	serviceName := "user-management-service"
@@ -73,6 +72,28 @@ func UserHandler(w http.ResponseWriter, r *http.Request) {
 
 			// Read the response body
 			body, _ := io.ReadAll(resp.Body)
+
+			// If it's a login, extract the token and store it in Redis
+			if r.URL.Path == "/api/user/login" && resp.StatusCode == http.StatusOK {
+				var data map[string]string
+				json.Unmarshal(body, &data)
+				if token, ok := data["token"]; ok {
+					// Assuming username is also in the response for unique token storage
+					if username, exists := data["username"]; exists {
+						// Cache token in Redis with username as key
+						ctx := context.Background()
+						key := fmt.Sprintf("jwt_token_%s", username) // Store with unique username
+						err := middleware.RedisClient.Set(ctx, key, token, 24*time.Hour).Err()
+						if err != nil {
+							http.Error(w, "Failed to store token in Redis", http.StatusInternalServerError)
+							return err
+						}
+					} else {
+						http.Error(w, "Username missing in login response", http.StatusInternalServerError)
+						return err
+					}
+				}
+			}
 
 			// Write the response back to the client
 			w.WriteHeader(resp.StatusCode)

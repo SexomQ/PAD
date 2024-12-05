@@ -71,7 +71,7 @@ def leave_calendar(data):
     emit("message", f"Left calendar {calendar_name}")
 
 # Event for checking the status of the service and the database
-@app.route('/api/calendar/status', methods=['GET'])
+@app.route('/api/calendar/status', methods=['GET', 'POST'])
 def status():
     try:
         semaphore.acquire()
