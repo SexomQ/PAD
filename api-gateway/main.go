@@ -40,91 +40,6 @@ func main() {
 	// Check all records in Redis
 	r.HandleFunc("/api/redis", middleware.CheckRedis)
 
-	// Saga initiation
-	// builder := &saga.OrchestrationBuilder{}
-
-	// builder.AddStep(
-	// 	func(args ...interface{}) (interface{}, error) {
-	// 		fmt.Println("Executing step 1: Login")
-	// 		http.HandleFunc("/api/user/login", handlers.UserHandler)
-	// 		return "Step 1 result", nil
-	// 	},
-	// 	func(args ...interface{}) error {
-	// 		fmt.Println("Compensating step 1")
-	// 		return nil
-	// 	},
-	// ).AddStep(
-	// 	func(args ...interface{}) (interface{}, error) {
-	// 		fmt.Println("Executing step 2")
-	// 		http.HandleFunc("/api/calendar/status", handlers.CalendarHandler)
-	// 		return "Step 2 result", nil
-	// 	},
-	// 	func(args ...interface{}) error {
-	// 		fmt.Println("Compensating step 2")
-	// 		return nil
-	// 	},
-	// )
-
-	// builder.AddStep(
-	// 	func(args ...interface{}) (interface{}, error) {
-	// 		fmt.Println("Executing step 1: Login")
-
-	// 		// Perform the HTTP request
-	// 		resp, err := http.Post("http://localhost:8080/api/user/login", "application/json", nil)
-	// 		if err != nil {
-	// 			return nil, fmt.Errorf("failed to execute step 1: %v", err)
-	// 		}
-	// 		defer resp.Body.Close()
-
-	// 		// Check the status code
-	// 		if resp.StatusCode != http.StatusOK {
-	// 			return nil, fmt.Errorf("step 1 failed: received status code %d", resp.StatusCode)
-	// 		}
-
-	// 		return "Step 1 result", nil
-	// 	},
-	// 	func(args ...interface{}) error {
-	// 		fmt.Println("Compensating step 1")
-	// 		// Add compensation logic here
-	// 		return nil
-	// 	},
-	// ).AddStep(
-	// 	func(args ...interface{}) (interface{}, error) {
-	// 		fmt.Println("Executing step 2")
-
-	// 		// Perform the HTTP request
-	// 		resp, err := http.Get("http://localhost:8080/api/calendar/status")
-	// 		if err != nil {
-	// 			return nil, fmt.Errorf("failed to execute step 2: %v", err)
-	// 		}
-	// 		defer resp.Body.Close()
-
-	// 		// Check the status code
-	// 		if resp.StatusCode != http.StatusOK {
-	// 			return nil, fmt.Errorf("step 2 failed: received status code %d", resp.StatusCode)
-	// 		}
-
-	// 		return "Step 2 result", nil
-	// 	},
-	// 	func(args ...interface{}) error {
-	// 		fmt.Println("Compensating step 2")
-	// 		// Add compensation logic here
-	// 		return nil
-	// 	},
-	// )
-
-	// builtSaga := builder.Build()
-	// // Saga execution route
-	// r.HandleFunc("/api/execute_saga", func(w http.ResponseWriter, r *http.Request) {
-	// 	err := builtSaga.Execute()
-	// 	if err != nil {
-	// 		http.Error(w, fmt.Sprintf("Saga failed: %v", err), http.StatusInternalServerError)
-	// 		return
-	// 	}
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Write([]byte("Saga executed successfully"))
-	// })
-
 	r.HandleFunc("/api/execute_saga", func(w http.ResponseWriter, r *http.Request) {
 		// Step 1: Parse JSON payload
 		var payload saga.SagaPayload
@@ -150,8 +65,14 @@ func main() {
 					"password": userPayload.Password,
 				})
 
+				serviceName := "user-management-service"
+				serviceURL := load_balancers.RoundRobinLoadBalancer(serviceName)
+				if serviceURL == "" {
+					return nil, fmt.Errorf("service not in queue")
+				}
+
 				// Perform the HTTP POST request
-				resp, err := http.Post("http://localhost:8080/api/user/login", "application/json", bytes.NewBuffer(loginPayload))
+				resp, err := http.Post(serviceURL+"/api/user/login", "application/json", bytes.NewBuffer(loginPayload))
 				if err != nil {
 					return nil, fmt.Errorf("failed to execute step 1: %v", err)
 				}
@@ -180,8 +101,14 @@ func main() {
 					"username": userPayload.Username,
 				})
 
+				serviceName := "calendar-service"
+				serviceURL := load_balancers.RoundRobinLoadBalancer(serviceName)
+				if serviceURL == "" {
+					return nil, fmt.Errorf("service not in queue")
+				}
+
 				// Perform the HTTP GET request
-				resp, err := http.Post("http://localhost:8080/api/calendar/status", "application/json", bytes.NewBuffer(statusPayload))
+				resp, err := http.Post(serviceURL+"/api/calendar/status", "application/json", bytes.NewBuffer(statusPayload))
 				if err != nil {
 					return nil, fmt.Errorf("failed to execute step 2: %v", err)
 				}
