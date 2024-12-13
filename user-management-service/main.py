@@ -41,4 +41,4 @@ limiter.init_app(app)
 if __name__ == '__main__':
     from routes.routes import user
     app.register_blueprint(user)
-    app.run(host='0.0.0.0', port=5001)
+    app.run(host='0.0.0.0', port=5001, debug=True)

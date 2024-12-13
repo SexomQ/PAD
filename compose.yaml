@@ -1,4 +1,3 @@
-# version: "2"
 
 services:
   user-management-service:
@@ -179,9 +178,82 @@ services:
     networks:
       - main-network
 
+  redis_node_a:
+    image: redis:latest
+    container_name: redis_node_a
+    hostname: redis_node_a
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    networks:
+      main-network:
+        ipv4_address: 172.21.0.252
+
+  redis_node_b:
+    image: redis:latest
+    container_name: redis_node_b
+    ports:
+      - "6381:6379"
+    command: redis-server --appendonly yes
+    networks:
+      main-network:
+        ipv4_address: 172.21.0.253
+
+  redis_node_c:
+    image: redis:latest
+    container_name: redis_node_c
+    ports:
+      - "6382:6379"
+    command: redis-server --appendonly yes
+    networks:
+      main-network:
+        ipv4_address: 172.21.0.254
+
+  sentinel_node_a:
+    image: redis:latest
+    depends_on:
+      - redis_node_c
+    ports:
+      - "26379:26379"
+    networks:
+      - main-network
+    volumes:
+      - ./sentinel1.conf:/data/sentinel1.conf
+    command: >
+      redis-sentinel /data/sentinel1.conf --port 26379
+    
+  sentinel_node_b:
+    image: redis:latest
+    depends_on:
+      - redis_node_b
+    ports:
+      - "26380:26379"
+    networks:
+      - main-network
+    volumes:
+      - ./sentinel2.conf:/data/sentinel2.conf
+    command: >
+      redis-sentinel /data/sentinel2.conf --port 26379 
+
+  sentinel_node_c:
+    image: redis:latest
+    depends_on:
+      - redis_node_c
+    ports:
+      - "26381:26379"
+    networks:
+      - main-network
+    volumes:
+      - ./sentinel3.conf:/data/sentinel3.conf
+    command: >
+      redis-sentinel /data/sentinel3.conf --port 26379
+
 networks:
   main-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
 
 volumes:
   user-management-data:

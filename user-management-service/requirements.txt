@@ -1,3 +1,4 @@
+async-timeout==5.0.1
 blinker==1.8.2
 certifi==2024.8.30
 charset-normalizer==3.4.0
@@ -31,6 +32,7 @@ python-consul==1.1.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-logstash==0.4.8
+redis==5.2.1
 requests==2.32.3
 rich==13.9.2
 six==1.16.0
